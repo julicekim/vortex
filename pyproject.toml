@@ -16,7 +16,7 @@ dependencies = [
     "matplotlib",
     "pyarrow",
     "fastapi",
-    "uvicorn",
+    "uvicorn[standard]",
 ]
 requires-python = ">=3.11"
 [build-system]
