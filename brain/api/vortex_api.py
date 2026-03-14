@@ -53,6 +53,10 @@ def predict_whipsaw(data: FeatureInput):
             "feat_mins_from_open": data.mins_from_open,
             "feat_atr_compression_ratio": data.atr_compression_ratio
         }
+        
+        # [Dex's Detailed Logging] 줄(JUL) 형님 요청: 추론 요청 데이터 상세 기록!!
+        logger.info(f"📥 [Predict Request] Features: {input_dict}")
+        
         df = pd.DataFrame([input_dict])
         
         # 추론 실행 (XGBoost Predict)
@@ -60,11 +64,15 @@ def predict_whipsaw(data: FeatureInput):
         prediction = vortex_model.predict(df)[0]  # 0(안전) or 1(위험)
         prob = float(vortex_model.predict_proba(df)[0][1]) # 위험(1)일 확률
         
-        # 주니(Junie)가 읽기 편하도록 boolean 형태로 반환!!
-        return {
+        # [Dex's Detailed Logging] 추론 결과 상세 기록!!
+        result = {
             "danger": bool(prediction == 1),
             "probability": round(prob, 4)
         }
+        logger.info(f"📤 [Predict Result] {result}")
+        
+        # 주니(Junie)가 읽기 편하도록 boolean 형태로 반환!!
+        return result
         
     except Exception as e:
         logger.error(f"🚨 추론 중 에러 발생: {e}")
