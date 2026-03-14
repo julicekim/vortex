@@ -1,0 +1,23 @@
+[project]
+name = "vortex"
+version = "0.1.0"
+description = "Vortex (ML Training Engine) for Sophia - Part of Project Anvil Universe"
+authors = [{ name = "Dex", email = "dex@anvil.engine" }]
+dependencies = [
+    "polars",
+    "pandas",
+    "numpy",
+    "scikit-learn",
+    "torch",
+    "lightgbm",
+    "xgboost",
+    "pydantic-settings",
+    "loguru",
+    "matplotlib",
+    "pyarrow",
+]
+requires-python = ">=3.11"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
