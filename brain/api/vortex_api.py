@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 import xgboost as xgb
 import pandas as pd
 import os
@@ -26,11 +26,15 @@ logger.success("✅ Vortex 모델 로드 완료. API 서버가 주니(Junie)의 
 
 # 2. 입력 데이터 구조 정의 (Type Validation & Documentation)
 # 앤빌(Anvil)의 피처 명칭을 그대로 사용하되, 주니(Junie)의 Vesper 요청 편의를 위해 별칭(Alias) 부여!!
+# [IMPORTANT] Pydantic V2에서는 alias가 설정되면 요청 시 해당 이름으로 필드를 찾아야 함!!
 class FeatureInput(BaseModel):
-    feat_vol_surge_ratio: float = Field(..., alias="vol_surge_ratio", description="거래량 폭발 비율")
-    feat_vwap_dist_pct: float = Field(..., alias="vwap_dist_pct", description="VWAP 이격도 (%)")
-    feat_mins_from_open: float = Field(..., alias="mins_from_open", description="개장 후 경과 시간 (분)")
-    feat_atr_compression_ratio: float = Field(..., alias="atr_compression_ratio", description="변동성 압축 비율 (1m/5m)")
+    # 🚨 Pydantic V2 철벽 방어: 원래 이름과 별칭 모두 허용
+    model_config = ConfigDict(populate_by_name=True)
+
+    vol_surge_ratio: float = Field(..., description="거래량 폭발 비율")
+    vwap_dist_pct: float = Field(..., description="VWAP 이격도 (%)")
+    mins_from_open: float = Field(..., description="개장 후 경과 시간 (분)")
+    atr_compression_ratio: float = Field(..., description="변동성 압축 비율 (1m/5m)")
 
 # 3. 추론 엔드포인트
 @app.post("/predict")
@@ -41,11 +45,18 @@ def predict_whipsaw(data: FeatureInput):
     - probability: 위험(1)일 확률 (0.0 ~ 1.0)
     """
     try:
-        # Pydantic 모델을 DataFrame으로 변환 (모델 학습 시와 동일한 컬럼명 유지!!)
-        # 캬하하!! 덱스의 데이터는 설계도와 100% 일치한다고!!
-        df = pd.DataFrame([data.model_dump()])
+        # [CRITICAL FIX] 모델 학습 시 사용된 원본 피처명(feat_...)으로 수동 매핑하여 DataFrame 생성!!
+        # Pydantic Alias 이슈를 완전히 우회하여 정합성을 확보한다!!
+        input_dict = {
+            "feat_vol_surge_ratio": data.vol_surge_ratio,
+            "feat_vwap_dist_pct": data.vwap_dist_pct,
+            "feat_mins_from_open": data.mins_from_open,
+            "feat_atr_compression_ratio": data.atr_compression_ratio
+        }
+        df = pd.DataFrame([input_dict])
         
         # 추론 실행 (XGBoost Predict)
+        # XGBClassifier는 DataFrame의 컬럼명을 확인하므로, feat_ 접두사가 반드시 있어야 함!!
         prediction = vortex_model.predict(df)[0]  # 0(안전) or 1(위험)
         prob = float(vortex_model.predict_proba(df)[0][1]) # 위험(1)일 확률
         
@@ -57,7 +68,8 @@ def predict_whipsaw(data: FeatureInput):
         
     except Exception as e:
         logger.error(f"🚨 추론 중 에러 발생: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # 상세 에러 메시지 포함 (디버깅 용)
+        raise HTTPException(status_code=500, detail=f"Inference Error: {str(e)}")
 
 @app.get("/health")
 def health_check():

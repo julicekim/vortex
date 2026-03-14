@@ -17,6 +17,10 @@ if [ ! -f "$MODEL_FILE" ]; then
 fi
 
 # 3. API 서버 기동 (Uvicorn)
+echo "🧹 기존 가동 중인 보텍스(Vortex) API 서버를 정리합니다..."
+pkill -f uvicorn
+sleep 2
+
 echo "🚀 보텍스(Vortex) API 서버를 기동합니다... (Target: $MODEL_FILE)"
 echo "📡 엔드포인트: http://127.0.0.1:8000/predict"
 
