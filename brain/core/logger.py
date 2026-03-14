@@ -1,7 +1,7 @@
 import os
 import sys
 from loguru import logger
-from vortex.core.config import settings
+from brain.core.config import settings
 
 def setup_logger():
     """

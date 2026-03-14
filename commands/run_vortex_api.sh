@@ -22,4 +22,4 @@ echo "🚀 보텍스(Vortex) API 서버를 기동합니다... (Target: $MODEL_FI
 echo "📡 엔드포인트: http://127.0.0.1:8000/predict"
 
 # --reload 옵션은 개발용!! 실전(Production)에서는 빼는 게 좋습니다!!
-uvicorn vortex.api.vortex_api:app --host 127.0.0.1 --port 8000 --log-level info
+uvicorn brain.api.vortex_api:app --host 127.0.0.1 --port 8000 --log-level info

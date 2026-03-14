@@ -3,7 +3,7 @@ from pydantic import BaseModel, Field
 import xgboost as xgb
 import pandas as pd
 import os
-from vortex.core.config import settings
+from brain.core.config import settings
 from loguru import logger
 
 # [Vortex API 1.0] 소피아(Sophia) 누님의 뇌를 REST API로 제공한다!!

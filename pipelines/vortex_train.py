@@ -2,7 +2,7 @@ import os
 import polars as pl
 import xgboost as xgb
 from sklearn.metrics import classification_report, confusion_matrix
-from vortex.core.config import settings
+from brain.core.config import settings
 from loguru import logger
 
 def train_vortex_model():
