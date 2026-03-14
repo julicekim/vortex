@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # Vortex 전용 경로
     BASE_DIR: str = "/Users/julicekim/iotzu/vortex"
     LOG_DIR: str = "/Users/julicekim/iotzu/vortex/logs"
-    MODEL_DIR: str = "/Users/julicekim/iotzu/vortex/vortex/models/saved"
+    MODEL_DIR: str = "/Users/julicekim/iotzu/data/models" # Anvil이 만든 모델 금고와 통합!!
 
     # [Training] 학습 관련 설정
     BATCH_SIZE: int = 32
