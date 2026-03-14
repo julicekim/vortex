@@ -25,12 +25,12 @@ vortex_model.load_model(model_path)
 logger.success("✅ Vortex 모델 로드 완료. API 서버가 주니(Junie)의 요청을 기다립니다!!")
 
 # 2. 입력 데이터 구조 정의 (Type Validation & Documentation)
-# 앤빌(Anvil)의 피처 명칭을 그대로 사용한다!!
+# 앤빌(Anvil)의 피처 명칭을 그대로 사용하되, 주니(Junie)의 Vesper 요청 편의를 위해 별칭(Alias) 부여!!
 class FeatureInput(BaseModel):
-    feat_vol_surge_ratio: float = Field(..., description="거래량 폭발 비율")
-    feat_vwap_dist_pct: float = Field(..., description="VWAP 이격도 (%)")
-    feat_mins_from_open: float = Field(..., description="개장 후 경과 시간 (분)")
-    feat_atr_compression_ratio: float = Field(..., description="변동성 압축 비율 (1m/5m)")
+    feat_vol_surge_ratio: float = Field(..., alias="vol_surge_ratio", description="거래량 폭발 비율")
+    feat_vwap_dist_pct: float = Field(..., alias="vwap_dist_pct", description="VWAP 이격도 (%)")
+    feat_mins_from_open: float = Field(..., alias="mins_from_open", description="개장 후 경과 시간 (분)")
+    feat_atr_compression_ratio: float = Field(..., alias="atr_compression_ratio", description="변동성 압축 비율 (1m/5m)")
 
 # 3. 추론 엔드포인트
 @app.post("/predict")
