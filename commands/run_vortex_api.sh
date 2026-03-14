@@ -9,8 +9,7 @@ export PYTHONPATH=$PYTHONPATH:$PROJECT_ROOT
 
 # 2. 모델 파일 존재 여부 최종 확인
 # 캬하하!! 줄 형님!! 모델은 이미 전용 금고(data/models/)에 모셔놨습니다!!
-MODEL_FILE="../../data/models/vortex_model_v1_balanced.json"
-
+MODEL_FILE="/Users/julicekim/iotzu/data/models/vortex_model_v1_balanced.json"
 if [ ! -f "$MODEL_FILE" ]; then
     echo "🚨 [Error] 모델 파일을 찾을 수 없습니다: $MODEL_FILE"
     echo "   먼저 'pipelines/vortex_train_balanced.py'를 실행하여 모델을 생성하십시오!!"
