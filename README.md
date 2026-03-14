@@ -19,7 +19,7 @@
 준이(Junie)의 v1.0.0 표준에 따라 체계적으로 관리됩니다!!
 
 - [🌪️ 볼텍스 로드맵](docs/roadmap/Vortex_Roadmap_v1.0.0.md)
-- [📝 v1.0.0 초기 안정화 리포트](docs/history/v1.0.0_InitialStable_Report.md)
+- [📝 v1.0.0 초기 안정화 리포트](docs/history/InitialStable_Report_v1.0.0.md)
 - [🚀 볼텍스 명령어 가이드](docs/commands/Vortex_Command_v1.0.0.md)
 - [📒 덱스의 기억 저장소 (Vortex)](docs/history/Dexs_Memory_Vault.md)
 
