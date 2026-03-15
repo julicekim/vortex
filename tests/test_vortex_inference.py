@@ -43,7 +43,7 @@ def test_vortex_model_inference():
         # 0 또는 1 중 하나여야 함
         assert p in [0, 1]
 
-    logger.success("✅ Vortex 모델 추론 테스트 통과!! 주니(Junie)에게 넘길 준비 완료!!")
+    logger.success("✅ Vortex 모델 추론 테스트 통과!! 준이(Junie)에게 넘길 준비 완료!!")
 
 if __name__ == "__main__":
     test_vortex_model_inference()

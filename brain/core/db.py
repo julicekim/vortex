@@ -41,7 +41,7 @@ class PostgresClient:
 
         columns = [
             "timestamp", "ticker", "vol_surge", "vwap_dist", 
-            "mins_open", "atr_comp", "probability", "is_danger"
+            "mins_open", "atr_comp", "probability", "is_danger", "latency_ms"
         ]
         
         # list of dicts -> list of tuples
@@ -63,6 +63,52 @@ class PostgresClient:
             if conn:
                 conn.rollback()
             logger.error(f"Failed to insert intelligence records: {e}")
+            raise
+        finally:
+            if conn:
+                conn.close()
+
+    def upsert_intelligence(self, records: list[dict]):
+        """
+        분석 결과를 v_vortex_intelligence 테이블에 적재한다 (중복 시 업데이트).
+        백테스트 재실행이나 데이터 보정 시 유용함.
+        """
+        if not records:
+            return
+
+        columns = [
+            "timestamp", "ticker", "vol_surge", "vwap_dist",
+            "mins_open", "atr_comp", "probability", "is_danger", "latency_ms"
+        ]
+
+        # list of dicts -> list of tuples
+        data = [tuple(r.get(col) for col in columns) for r in records]
+
+        query = f"""
+            INSERT INTO v_vortex_intelligence ({", ".join(columns)})
+            VALUES %s
+            ON CONFLICT (timestamp, ticker) 
+            DO UPDATE SET 
+                vol_surge = EXCLUDED.vol_surge,
+                vwap_dist = EXCLUDED.vwap_dist,
+                mins_open = EXCLUDED.mins_open,
+                atr_comp = EXCLUDED.atr_comp,
+                probability = EXCLUDED.probability,
+                is_danger = EXCLUDED.is_danger,
+                latency_ms = EXCLUDED.latency_ms
+        """
+
+        conn = None
+        try:
+            conn = self.get_connection()
+            with conn.cursor() as cur:
+                execute_values(cur, query, data)
+            conn.commit()
+            logger.success(f"Successfully upserted {len(records)} records into v_vortex_intelligence")
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            logger.error(f"Failed to upsert intelligence records: {e}")
             raise
         finally:
             if conn:

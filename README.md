@@ -4,6 +4,22 @@
 
 ---
 
+## 🏷️ 시스템 관리 (Standard Management)
+준이(Junie)의 **시스템 문서 및 로그 관리 표준화 명세서(v1.0.0)**를 준수합니다.
+
+- **현재 버전**: `v1.0.0`
+- **📂 문서 구조 (Docs Index)**:
+    - [🧠 덱스의 기억 (Vault)](docs/history/Dexs_Memory_Vault.md): Vortex 엔진의 영혼과 파트너십 가이드 [MASTER]
+    - [📋 전략 및 로직 마스터](docs/research/Vortex_Strategy_Logic_Master.md): 모델 아키텍처 및 학습 전략 [STRATEGY]
+    - [🏗️ 인프라 및 기술 마스터](docs/research/Infrastructure_Engineering_Master.md): API 서빙 및 학습 최적화 [INFRA]
+    - [🤝 팀 협업 표준](docs/teams/Team_Collaboration_Standard.md): Iotzu 팀 공통 협업 규격 [TEAM]
+    - [📜 작업 이력 및 아카이브](docs/history/Archive_v1_Historical_Reports.md): 과거 모델 리포트 통합본 [HISTORY]
+    - [🚀 명령어 가이드](docs/commands/Vortex_Command_v1.1.0.md): 볼텍스 운영 커맨드 보관소
+    - [🗺️ 로드맵 v1.0.0](docs/roadmap/Vortex_Roadmap_v1.0.0.md): 볼텍스 진화 계획
+- **📝 로깅 정책**: `logs/` 디렉토리에 10MB Rolling 정책 적용 (Loguru)
+
+---
+
 ## 🏗️ 볼텍스 아키텍처 (Archi's Design)
 볼텍스는 앤빌에서 덤프한 최고급 Parquet 파일을 흡수하여 소피아 누님의 뇌(Model)를 강화하는 역할을 합니다!!
 
@@ -12,17 +28,6 @@
 - **vortex/trainers**: 손실 함수(Loss), 최적화(Optimizer)를 담당하는 훈련소!!
 - **pipelines/run_train.py**: 실제 학습을 가동하는 메인 스위치!!
 - **vortex/core**: 중앙 제어 설정 및 로깅 시스템!!
-
----
-
-## 📚 문서 및 관리 표준 (Docs Index)
-준이(Junie)의 v1.0.0 표준에 따라 체계적으로 관리됩니다!!
-
-- [🌪️ 볼텍스 로드맵](docs/roadmap/Vortex_Roadmap_v1.0.0.md)
-- [📈 모델 성능 리포트](docs/research/ModelPerformance_v1.0.0.md)
-- [📝 v1.0.0 초기 안정화 리포트](docs/history/InitialStable_Report_v1.0.0.md)
-- [🚀 볼텍스 명령어 가이드](docs/commands/Vortex_Command_v1.0.0.md)
-- [📒 덱스의 기억 저장소 (Vortex)](docs/history/Dexs_Memory_Vault.md)
 
 ---
 

@@ -61,3 +61,7 @@ coverage.xml
 .uv/
 node_modules/
 tmp/
+
+# [Standard] Temporary Reports (Local Privacy)
+docs/history/temp_reports/
+!docs/history/temp_reports/.gitkeep

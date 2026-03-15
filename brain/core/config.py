@@ -29,6 +29,23 @@ class Settings(BaseSettings):
         'SMCI', 'ARM'
     ]
 
+    NON_NASDAQ_TICKERS: list[str] = [
+        'LLY', 'UNH', 'JPM', 'GS', 'GE', 'CAT', 'LMT', 'XOM', 'WMT', 'COST'
+    ]
+
+    REGIME_TICKERS: list[str] = ["QQQ", "PSQ", "SQQQ"]
+
+    @property
+    def ALL_TICKERS(self) -> list[str]:
+        return list(set(self.NASDAQ_TICKERS + self.NON_NASDAQ_TICKERS + self.REGIME_TICKERS))
+
+    # Postgres 데이터베이스 연결 설정 (Anvil과 동일하게 유지!!)
+    DB_HOST: str = "localhost"
+    DB_PORT: int = 5432
+    DB_USER: str = "postgres"
+    DB_PASSWORD: str = "iotzu123"
+    DB_NAME: str = "postgres"
+
     # 환경 변수 우선순위: 시스템 환경 변수 > .env 파일
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
