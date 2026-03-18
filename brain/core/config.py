@@ -7,14 +7,14 @@ class Settings(BaseSettings):
 
     # [Paths] 데이터 저장 경로 설정 (Anvil과 공유!!)
     # Anvil이 제련한 데이터를 Vortex가 직접 흡수한다!!
-    DATA_DIR: str = "/Users/julicekim/iotzu/data"
-    PROCESSED_DIR: str = "/Users/julicekim/iotzu/data/processed"
-    ML_FEATURES_DIR: str = "/Users/julicekim/iotzu/data/ml_features"
-    
+    DATA_DIR: str = str(_IOTZU_ROOT / "data")
+    PROCESSED_DIR: str = str(_IOTZU_ROOT / "data" / "processed")
+    ML_FEATURES_DIR: str = str(_IOTZU_ROOT / "data" / "ml_features")
+
     # Vortex 전용 경로
-    BASE_DIR: str = "/Users/julicekim/iotzu/vortex"
-    LOG_DIR: str = "/Users/julicekim/iotzu/vortex/logs"
-    MODEL_DIR: str = "/Users/julicekim/iotzu/data/models" # Anvil이 만든 모델 금고와 통합!!
+    BASE_DIR: str = str(_VORTEX_ROOT)
+    LOG_DIR: str = str(_VORTEX_ROOT / "logs")
+    MODEL_DIR: str = str(_IOTZU_ROOT / "data" / "models")  # Anvil이 만든 모델 금고와 통합!!
 
     # [Training] 학습 관련 설정
     BATCH_SIZE: int = 32
