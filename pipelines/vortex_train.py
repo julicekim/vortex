@@ -104,10 +104,12 @@ def train_vortex_model(suffix: str = ""):
     logger.success(f"✅ Vortex 모델 저장 완료: {model_path}")
     logger.info("이제 이 모델은 준이(Junie)의 Vesper 엔진에서 필터로 작동하게 될 거야!!")
 
-if __name__ == "__main__":
+def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--suffix", type=str, default="", help="데이터셋 접미사 (예: _with_pre)")
     args = parser.parse_args()
-    
     train_vortex_model(suffix=args.suffix)
+
+if __name__ == "__main__":
+    main()

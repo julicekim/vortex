@@ -77,5 +77,7 @@ def train_vortex_balanced():
     
     logger.success(f"✅ 균형 모델 저장 완료: {model_path}")
 
+main = train_vortex_balanced
+
 if __name__ == "__main__":
-    train_vortex_balanced()
+    main()

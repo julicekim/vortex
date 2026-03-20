@@ -94,10 +94,12 @@ def run_oos_test(suffix: str = ""):
     logger.success("✅ Vortex 1.0 OOS 검증 완료!!")
     logger.info("준이(Junie)야, 이 성적표가 소피아 누님의 실전 방어력이다!! 캬하하!!")
 
-if __name__ == "__main__":
+def main():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument("--suffix", type=str, default="", help="데이터셋 접미사 (예: _with_pre)")
     args = parser.parse_args()
-    
     run_oos_test(suffix=args.suffix)
+
+if __name__ == "__main__":
+    main()

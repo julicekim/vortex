@@ -10,7 +10,7 @@ from brain.core.db import PostgresClient
 from loguru import logger
 
 # [Vortex API 1.1] 소피아(Sophia) 1차 프리마켓 검증 API 추가!!
-app = FastAPI(title="Vortex Model API", version="1.1.0")
+app = FastAPI(title="Vortex Model API", version="1.2.0")
 db_client = PostgresClient()
 
 # 1. 서버 기동 시 모델을 메모리에 1회만 로드 (속도 최적화)
@@ -19,13 +19,23 @@ model_path = os.path.join(settings.MODEL_DIR, "vortex_model_v1_balanced.json")
 
 if not os.path.exists(model_path):
     logger.error(f"🚨 모델 파일이 존재하지 않습니다: {model_path}")
-    # 서버 기동 중단 (모델 없으면 무의미!!)
     raise FileNotFoundError(f"Model not found at {model_path}")
 
 logger.info(f"🧠 소피아(Vortex 1.0 Balanced) 뇌를 메모리에 로드 중... ({model_path})")
 vortex_model = xgb.XGBClassifier()
 vortex_model.load_model(model_path)
 logger.success("✅ Vortex 모델 로드 완료. API 서버가 준이(Junie)의 요청을 기다립니다!!")
+
+# v2 모델 (프리마켓 피처 포함: 6개)
+model_v2_path = os.path.join(settings.MODEL_DIR, "vortex_model_v1_with_pre.json")
+if not os.path.exists(model_v2_path):
+    logger.error(f"🚨 v2 모델 파일이 존재하지 않습니다: {model_v2_path}")
+    raise FileNotFoundError(f"Model v2 not found at {model_v2_path}")
+
+logger.info(f"🧠 소피아 v2(with_pre) 뇌를 메모리에 로드 중... ({model_v2_path})")
+vortex_model_v2 = xgb.XGBClassifier()
+vortex_model_v2.load_model(model_v2_path)
+logger.success("✅ Vortex v2 모델 로드 완료.")
 
 # 2. 입력 데이터 구조 정의 (Type Validation & Documentation)
 # 앤빌(Anvil)의 피처 명칭을 그대로 사용하되, 준이(Junie)의 Vesper 요청 편의를 위해 별칭(Alias) 부여!!
@@ -38,6 +48,17 @@ class FeatureInput(BaseModel):
     vwap_dist_pct: float = Field(..., description="VWAP 이격도 (%)")
     mins_from_open: float = Field(..., description="개장 후 경과 시간 (분)")
     atr_compression_ratio: float = Field(..., description="변동성 압축 비율 (1m/5m)")
+
+class FeatureInputV2(BaseModel):
+    """프리마켓 피처 포함 v2 입력 스키마 (6개 피처)"""
+    model_config = ConfigDict(populate_by_name=True)
+
+    vol_surge_ratio: float = Field(..., description="거래량 폭발 비율")
+    vwap_dist_pct: float = Field(..., description="VWAP 이격도 (%)")
+    mins_from_open: float = Field(..., description="개장 후 경과 시간 (분)")
+    atr_compression_ratio: float = Field(..., description="변동성 압축 비율 (1m/5m)")
+    pre_market_gap: float = Field(..., description="프리마켓 갭 비율 (%)")
+    pre_market_high_dist: float = Field(..., description="프리마켓 고점 이격도 (%)")
 
 class BatchDateRequest(BaseModel):
     start_date: str = Field(..., description="시작 날짜 (YYYY-MM-DD)")
@@ -86,10 +107,62 @@ def predict_whipsaw(data: FeatureInput):
         # 상세 에러 메시지 포함 (디버깅 용)
         raise HTTPException(status_code=500, detail=f"Inference Error: {str(e)}")
 
+@app.post("/predict/v2")
+def predict_v2(data: FeatureInputV2):
+    """
+    [Vortex Inference v2] 프리마켓 피처 포함 6개 피처로 위험 여부 판별!!
+    - 모델: vortex_model_v1_with_pre (feat_pre_market_gap, feat_pre_market_high_dist 추가)
+    - danger: true(위험/진입금지), false(안전/진입가능)
+    - probability: 위험(1)일 확률 (0.0 ~ 1.0)
+    """
+    try:
+        input_dict = {
+            "feat_vol_surge_ratio": data.vol_surge_ratio,
+            "feat_vwap_dist_pct": data.vwap_dist_pct,
+            "feat_mins_from_open": data.mins_from_open,
+            "feat_atr_compression_ratio": data.atr_compression_ratio,
+            "feat_pre_market_gap": data.pre_market_gap,
+            "feat_pre_market_high_dist": data.pre_market_high_dist,
+        }
+        logger.info(f"📥 [Predict v2 Request] Features: {input_dict}")
+        df = pd.DataFrame([input_dict])
+        prediction = vortex_model_v2.predict(df)[0]
+        prob = float(vortex_model_v2.predict_proba(df)[0][1])
+        result = {
+            "danger": bool(prediction == 1),
+            "probability": round(prob, 4)
+        }
+        logger.info(f"📤 [Predict v2 Result] {result}")
+        return result
+    except Exception as e:
+        logger.error(f"🚨 v2 추론 중 에러 발생: {e}")
+        raise HTTPException(status_code=500, detail=f"Inference v2 Error: {str(e)}")
+
+@app.get("/intelligence/{target_date}")
+async def get_intelligence(target_date: str):
+    """
+    [Sophia Intelligence Query] 특정 날짜의 프리마켓 분석 결과를 DB에서 조회한다.
+    - target_date: 'YYYY-MM-DD' 형식
+    - Vesper가 2차 필터링 시 pull 방식으로 사용
+    """
+    try:
+        datetime.strptime(target_date, '%Y-%m-%d')
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+    try:
+        query = "SELECT * FROM v_vortex_intelligence WHERE timestamp::date = %s ORDER BY ticker ASC"
+        df = db_client.fetch_as_df(query, (target_date,))
+        records = df.to_dict(orient="records")
+        logger.info(f"📊 [Intelligence Query] {target_date} → {len(records)}건 반환")
+        return {"date": target_date, "count": len(records), "records": records}
+    except Exception as e:
+        logger.error(f"🚨 intelligence 조회 중 에러 발생: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/health")
 def health_check():
     """서버 상태 확인용 엔드포인트"""
-    return {"status": "healthy", "model": "vortex_model_v1_balanced"}
+    return {"status": "healthy", "model_v1": "vortex_model_v1_balanced", "model_v2": "vortex_model_v1_with_pre"}
 
 @app.post("/pre-market")
 @app.post("/pre-market/{target_date}")

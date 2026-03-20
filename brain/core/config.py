@@ -1,5 +1,9 @@
+from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 import os
+
+_VORTEX_ROOT = Path(__file__).parent.parent.parent  # ~/iotzu/vortex
+_IOTZU_ROOT = _VORTEX_ROOT.parent                   # ~/iotzu
 
 class Settings(BaseSettings):
     # Vortex 시스템 버전
