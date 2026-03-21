@@ -178,8 +178,8 @@ def test_pre_market_batch_invalid_range():
     [Vortex API] /pre-market/batch 잘못된 날짜 범위 테스트
     """
     payload = {
-        "start_date": "2026-03-01",
-        "end_date": "2026-03-05"
+        "start_date": "2026-03-05",
+        "end_date": "2026-03-01"
     }
     response = client.post("/pre-market/batch", json=payload)
     assert response.status_code == 400

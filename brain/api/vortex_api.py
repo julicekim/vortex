@@ -329,14 +329,14 @@ async def validate_pre_market_batch(data: BatchDateRequest):
     - 백테스트(Backtest)용 대량 데이터 생성에 최적화!!
     """
     start_time = datetime.now()
-    logger.info(f"DEBUG: Received batch request: {data}")
+    logger.debug(f"Received batch request: {data}")
     try:
         try:
             start_dt = datetime.strptime(data.start_date, '%Y-%m-%d')
             end_dt = datetime.strptime(data.end_date, '%Y-%m-%d')
-            logger.info(f"DEBUG: Parsed dates: {start_dt}, {end_dt}")
+            logger.debug(f"Parsed dates: {start_dt}, {end_dt}")
         except ValueError as ve:
-            logger.error(f"DEBUG: Date parsing failed: {ve}")
+            logger.warning(f"Date parsing failed: {ve}")
             raise HTTPException(status_code=400, detail=f"Invalid date format. Use YYYY-MM-DD. Error: {str(ve)}")
             
         if start_dt > end_dt:

@@ -41,7 +41,7 @@ class Settings(BaseSettings):
 
     @property
     def ALL_TICKERS(self) -> list[str]:
-        return list(set(self.NASDAQ_TICKERS + self.NON_NASDAQ_TICKERS + self.REGIME_TICKERS))
+        return list(dict.fromkeys(self.NASDAQ_TICKERS + self.NON_NASDAQ_TICKERS + self.REGIME_TICKERS))
 
     # Postgres 데이터베이스 연결 설정 (Anvil과 동일하게 유지!!)
     DB_HOST: str = "localhost"

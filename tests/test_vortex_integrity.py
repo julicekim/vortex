@@ -50,13 +50,10 @@ def test_path_configuration():
     assert "data" in settings.DATA_DIR
 
 def test_vortex_logic_recheck():
-    """기존 보텍스 산출 로직(tests/test_vortex_logic.py) 실행 여부 확인"""
-    # 이 테스트는 별도 파일로 존재하므로 임포트 테스트만 수행
-    try:
-        import tests.test_vortex_logic as logic_test
-        logger.info("✅ Vortex 산출 로직 테스트 모듈 로드 완료")
-    except ImportError as e:
-        pytest.fail(f"❌ tests.test_vortex_logic 로드 실패: {e}")
+    """Vortex 피처 로직 테스트는 Anvil 프로젝트(anvil/tests/test_vortex_features.py)로 이전됨"""
+    # add_vortex_features()는 Anvil의 app.transformers.features 모듈이므로
+    # 피처 정합성 검증은 Anvil 테스트에서 수행한다.
+    logger.info("ℹ️ Vortex 피처 로직 테스트는 Anvil 프로젝트로 이전됨 (anvil/tests/test_vortex_features.py)")
 
 if __name__ == "__main__":
     # 직접 실행 시 로거 설정

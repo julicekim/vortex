@@ -1,4 +1,5 @@
 import os
+import json
 import polars as pl
 import xgboost as xgb
 from sklearn.metrics import classification_report, confusion_matrix
@@ -19,7 +20,16 @@ def train_vortex_balanced():
     
     logger.info(f"📦 훈련 데이터 병합 중... ({len(parquet_files)} tickers)")
     df_train = pl.concat([pl.read_parquet(f) for f in parquet_files])
-    
+
+    # [데이터 클리닝] inf 또는 NaN 제거 (피처 계산 시 발생 가능성 대처)
+    initial_len = len(df_train)
+    numeric_cols = df_train.select(pl.col(pl.Float64, pl.Int64)).columns
+    df_train = df_train.filter(
+        ~pl.any_horizontal(pl.col(numeric_cols).is_infinite() | pl.col(numeric_cols).is_nan())
+    )
+    if len(df_train) < initial_len:
+        logger.warning(f"⚠️ {initial_len - len(df_train)}행의 부적절한 데이터(inf/nan)를 정제했습니다.")
+
     # ---------------------------------------------------------
     # ⚖️ [핵심] 언더샘플링 (Under-sampling) 로직 추가
     # ---------------------------------------------------------
@@ -34,8 +44,8 @@ def train_vortex_balanced():
     # 캬하하!! 1,200만 개의 위험 데이터를 93만 개로 싹둑 잘라버릴게!!
     df_danger_sampled = df_danger.sample(n=min_count, seed=42)
     
-    # 다시 합치고 무작위 셔플(Shuffle) - 소피아 누님이 순서를 외우면 안 되니까!!
-    df_balanced = pl.concat([df_safe, df_danger_sampled]).sample(fraction=1.0, seed=42)
+    # 다시 합치기 (셔플은 Val 분리 후 학습 데이터에만 적용)
+    df_balanced = pl.concat([df_safe, df_danger_sampled])
     logger.info(f"⚖️ 1:1 황금비율 데이터셋 완성!! 총 {df_balanced.height}행 학습 대기 중.")
     # ---------------------------------------------------------
     
@@ -48,9 +58,20 @@ def train_vortex_balanced():
     ]
     target_col = "target_label"
 
-    X_train = df_balanced.select(feature_cols).to_pandas()
-    y_train = df_balanced.select(target_col).to_pandas().values.ravel()
-    
+    # 시간순 마지막 20%를 Validation으로 분리 (셔플 전에 분리하여 시계열 정합성 유지)
+    val_split_idx = int(df_balanced.height * 0.8)
+    df_train_split = df_balanced[:val_split_idx]
+    df_val_split = df_balanced[val_split_idx:]
+    logger.info(f"📊 Train/Val 분리: Train {df_train_split.height}행, Val {df_val_split.height}행")
+
+    # 학습용은 셔플, Validation은 셔플 없이 유지
+    df_train_split = df_train_split.sample(fraction=1.0, seed=42)
+
+    X_train = df_train_split.select(feature_cols).to_pandas()
+    y_train = df_train_split.select(target_col).to_pandas().values.ravel()
+    X_val = df_val_split.select(feature_cols).to_pandas()
+    y_val = df_val_split.select(target_col).to_pandas().values.ravel()
+
     # 3. XGBoost 모델 세팅 (소피아의 영점 조절)
     logger.info("🧠 소피아(Sophia) 누님의 균형 데이터 학습 시작... 가중치 제거 및 깊이 강화!!")
     model = xgb.XGBClassifier(
@@ -60,15 +81,34 @@ def train_vortex_balanced():
         # scale_pos_weight=2.0,   <-- 데이터가 1:1이므로 인위적인 공포(가중치)는 필요 없다!!
         random_state=42,
         n_jobs=-1,
-        eval_metric='logloss'
+        eval_metric='logloss',
+        early_stopping_rounds=10  # Validation logloss가 10라운드 연속 개선 안 되면 조기 종료
     )
-    
-    model.fit(X_train, y_train)
+
+    model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=10)
     
     # 4. 모델 저장 (Vesper Java 연동용 JSON)
     model_path = os.path.join(settings.MODEL_DIR, "vortex_model_v1_balanced.json")
     model.save_model(model_path)
-    
+
+    # 모델 메타데이터 저장 (피처 리스트, 학습 조건 기록)
+    metadata = {
+        "model_name": "vortex_model_v1_balanced.json",
+        "features": feature_cols,
+        "train_dir": train_dir,
+        "train_samples": len(X_train),
+        "class_balance": "1:1 undersampled",
+        "xgb_params": {
+            "max_depth": model.get_params()["max_depth"],
+            "learning_rate": model.get_params()["learning_rate"],
+            "n_estimators": model.get_params()["n_estimators"],
+        }
+    }
+    meta_path = model_path.replace(".json", "_meta.json")
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
+    logger.info(f"📋 모델 메타데이터 저장: {meta_path}")
+
     # 5. 훈련 데이터 내재 평가
     y_pred = model.predict(X_train)
     logger.info("\n📊 [균형 데이터 학습 모델 - 내부 평가 지표]")

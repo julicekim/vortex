@@ -1,4 +1,5 @@
 import os
+import json
 import polars as pl
 import xgboost as xgb
 from sklearn.metrics import classification_report, confusion_matrix
@@ -100,7 +101,25 @@ def train_vortex_model(suffix: str = ""):
     model_name = "vortex_model_v1" + suffix + ".json"
     model_path = os.path.join(settings.MODEL_DIR, model_name)
     model.save_model(model_path)
-    
+
+    # 모델 메타데이터 저장 (피처 리스트, 학습 조건 기록)
+    metadata = {
+        "model_name": model_name,
+        "features": available_features,
+        "train_dir": train_dir,
+        "train_samples": len(X_train),
+        "class_balance": f"scale_pos_weight={model.get_params().get('scale_pos_weight', 'None')}",
+        "xgb_params": {
+            "max_depth": model.get_params()["max_depth"],
+            "learning_rate": model.get_params()["learning_rate"],
+            "n_estimators": model.get_params()["n_estimators"],
+        }
+    }
+    meta_path = model_path.replace(".json", "_meta.json")
+    with open(meta_path, "w") as f:
+        json.dump(metadata, f, indent=2, ensure_ascii=False)
+    logger.info(f"📋 모델 메타데이터 저장: {meta_path}")
+
     logger.success(f"✅ Vortex 모델 저장 완료: {model_path}")
     logger.info("이제 이 모델은 준이(Junie)의 Vesper 엔진에서 필터로 작동하게 될 거야!!")
 

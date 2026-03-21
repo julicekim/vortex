@@ -1,5 +1,5 @@
-from vortex.core.config import settings
-from vortex.core.logger import setup_logger
+from brain.core.config import settings
+from brain.core.logger import setup_logger
 from loguru import logger
 import os
 
