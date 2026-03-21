@@ -7,7 +7,7 @@
 ### 모델 학습 실행 (XGBoost)
 ```bash
 # Anvil의 Parquet 데이터를 읽어 Sophia v1 모델 학습
-uv run python pipelines/vortex_train.py
+uv run python pipelines/vortex_train_premarket.py
 ```
 
 ### OOS(Out-of-Sample) 테스트

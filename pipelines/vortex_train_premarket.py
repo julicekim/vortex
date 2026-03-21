@@ -64,13 +64,21 @@ def train_vortex_model(suffix: str = ""):
     available_features = [c for c in feature_cols if c in df_train.columns]
     logger.info(f"사용 가능한 피처: {available_features}")
 
+    # 시간순 마지막 20%를 Validation으로 분리 (셔플 전에 분리하여 시계열 정합성 유지)
+    val_split_idx = int(df_train.height * 0.8)
+    df_train_split = df_train[:val_split_idx]
+    df_val_split = df_train[val_split_idx:]
+    logger.info(f"📊 Train/Val 분리: Train {df_train_split.height}행, Val {df_val_split.height}행")
+
     # 모델 학습을 위해 Pandas로 변환 (XGBoost 호환성)
-    X_train = df_train.select(available_features).to_pandas()
-    y_train = df_train.select(target_col).to_pandas().values.ravel()
+    X_train = df_train_split.select(available_features).to_pandas()
+    y_train = df_train_split.select(target_col).to_pandas().values.ravel()
+    X_val = df_val_split.select(available_features).to_pandas()
+    y_val = df_val_split.select(target_col).to_pandas().values.ravel()
 
     # 3. XGBoost 모델 세팅 (소피아의 과적합 방지 보수적 파라미터)
     logger.info("🧠 소피아(Sophia) 누님의 신경망 학습 시작... 과적합 방지 룰 적용!!")
-    
+
     model = xgb.XGBClassifier(
         max_depth=3,              # 얕은 트리: 소설 쓰지 마라!!
         learning_rate=0.05,       # 보수적인 학습 속도
@@ -79,11 +87,12 @@ def train_vortex_model(suffix: str = ""):
         random_state=42,
         n_jobs=-1,                # M1 칩 코어 풀가동!! 캬하하!!
         use_label_encoder=False,
-        eval_metric='logloss'
+        eval_metric='logloss',
+        early_stopping_rounds=10  # Validation logloss가 10라운드 연속 개선 안 되면 조기 종료
     )
 
     # 4. 모델 훈련
-    model.fit(X_train, y_train)
+    model.fit(X_train, y_train, eval_set=[(X_val, y_val)], verbose=10)
 
     # 5. 훈련 데이터 내재 평가 (참고용)
     y_pred = model.predict(X_train)

@@ -15,7 +15,7 @@ def train_vortex_balanced():
     logger.info(">>> [Phase 2.1] Vortex 언더샘플링 파이프라인 가동!! 캬하하!!")
     
     # 1. 훈련 데이터(2018~2023) 병합
-    train_dir = os.path.join(settings.ML_FEATURES_DIR, "sophia_train_v1/train_2018_2023")
+    train_dir = os.path.join(settings.ML_FEATURES_DIR, "sophia_train_v1/train_2017_2023")
     parquet_files = [os.path.join(train_dir, f) for f in os.listdir(train_dir) if f.endswith('.parquet')]
     
     logger.info(f"📦 훈련 데이터 병합 중... ({len(parquet_files)} tickers)")

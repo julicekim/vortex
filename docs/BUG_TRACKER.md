@@ -26,7 +26,7 @@
 
 | 구분 | 마지막 번호 | 다음 사용 |
 |------|------------|-----------|
-| BUG  | BUG-V8     | BUG-V9    |
+| BUG  | BUG-V11    | BUG-V12   |
 | S    | (없음)     | S-V1      |
 
 ---
@@ -60,6 +60,9 @@
 | BUG-V8 | `vortex_train_balanced.py` Validation Set + early_stopping 추가 | 2026-03-21 | 과적합 방지 — 10라운드 조기 종료 |
 | — | `pre-market/batch` API + 테스트 삭제 | 2026-03-21 | 미사용 엔드포인트 정리 |
 | — | `vortex_oos_test.py` OOS 경로 고정 + `_meta.json` 기반 피처 선택 | 2026-03-21 | suffix 경로 오류 + 피처 불일치 수정 |
+| BUG-V9 | `vortex_train.py` Validation Set + early_stopping 누락 | 2026-03-21 | balanced만 적용되고 원본 누락 — 과적합 방지 브레이크 없음 |
+| BUG-V10 | `vortex_train.py` → `vortex_train_premarket.py` 리네임 | 2026-03-21 | 프리마켓 피처 포함 학습 스크립트 — 파일명으로 용도 구분 |
+| BUG-V11 | `vortex_train_balanced.py` 훈련 기간 `2018→2017` 통일 | 2026-03-21 | 2017 데이터 존재하므로 두 스크립트 훈련 기간 일치시킴 |
 
 ---
 

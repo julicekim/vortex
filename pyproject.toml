@@ -24,7 +24,7 @@ dependencies = [
 ]
 requires-python = ">=3.11"
 [project.scripts]
-vortex-train          = "pipelines.vortex_train:main"
+vortex-train-premarket = "pipelines.vortex_train_premarket:main"
 vortex-train-balanced = "pipelines.vortex_train_balanced:main"
 vortex-oos-test       = "pipelines.vortex_oos_test:main"
 

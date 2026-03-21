@@ -32,7 +32,7 @@ def test_vortex_api_structure():
 def test_vortex_pipelines_import():
     """pipelines 하위 훈련 및 검증 스크립트 임포트 확인"""
     try:
-        from pipelines.vortex_train import train_vortex_model
+        from pipelines.vortex_train_premarket import train_vortex_model
         from pipelines.vortex_train_balanced import train_vortex_balanced
         from pipelines.vortex_oos_test import run_oos_test
         logger.info("✅ pipelines 모듈 전수 로드 완료!!")
