@@ -27,7 +27,7 @@
 | 구분 | 마지막 번호 | 다음 사용 |
 |------|------------|-----------|
 | BUG  | BUG-V15    | BUG-V16   |
-| S    | S-V3       | S-V4      |
+| S    | S-V6       | S-V7      |
 
 ---
 
@@ -76,6 +76,36 @@
 | 발견일 | 2026-03-21 |
 | 상태 | ⚠️ Pydantic Settings 환경변수 우선 적용 — 프로덕션 배포 시 `.env` 분리 |
 
+### S-V4: v2 모델 없으면 서버 전체 기동 불가
+
+| 항목 | 내용 |
+|------|------|
+| 파일 | `brain/api/vortex_api.py:41-43` |
+| 영향도 | **MEDIUM** |
+| 발견일 | 2026-03-21 |
+| 상태 | ⚠️ pre-market 미사용 중 — 활성화 시 수정 |
+
+- Vesper는 `/predict` (v1)만 사용하나, `vortex_model_v1_with_pre.json` 없으면 `FileNotFoundError`로 서버 자체 기동 안 됨
+- 수정안: v2 모델 로드를 optional로 변경 (없으면 warning, `/predict/v2` 호출 시 503)
+
+### S-V5: `test_vortex_inference.py` 피처 컬럼 하드코딩
+
+| 항목 | 내용 |
+|------|------|
+| 파일 | `tests/test_vortex_inference.py:26-35` |
+| 영향도 | **LOW** |
+| 발견일 | 2026-03-21 |
+| 상태 | ⚠️ BUG-V12 _meta.json 패턴 미적용 — 피처 변경 시 테스트 깨짐 |
+
+### S-V6: `vortex_train_premarket.py` deprecated `use_label_encoder=False`
+
+| 항목 | 내용 |
+|------|------|
+| 파일 | `pipelines/vortex_train_premarket.py:89` |
+| 영향도 | **LOW** |
+| 발견일 | 2026-03-21 |
+| 상태 | ⚠️ XGBoost ≥1.6에서 제거됨 — `vortex_train_balanced.py`에는 이미 없음 |
+
 ---
 
 ## ✅ RESOLVED
@@ -105,4 +135,4 @@
 ---
 
 *"모델의 실력은 데이터의 품질에서 시작된다. 오염된 입력은 어떤 알고리즘도 구원하지 못한다." — Jack*
-*마지막 업데이트: 2026-03-21 by codegg (잭 2차 리뷰 BUG-V12~V15, S-V1~V3 반영)*
+*마지막 업데이트: 2026-03-21 by codegg (최종 코드 리뷰 S-V4~V6 추가, Vortex 리뷰 완료)*
