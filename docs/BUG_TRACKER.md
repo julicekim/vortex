@@ -26,20 +26,55 @@
 
 | 구분 | 마지막 번호 | 다음 사용 |
 |------|------------|-----------|
-| BUG  | BUG-V11    | BUG-V12   |
-| S    | (없음)     | S-V1      |
+| BUG  | BUG-V15    | BUG-V16   |
+| S    | S-V3       | S-V4      |
 
 ---
 
 ## 🔴 BUG (Open)
 
-(현재 Open 버그 없음)
+### BUG-V14: pre-market 임계값 하드코딩 — 학습 근거 없음
+
+| 항목 | 내용 |
+|------|------|
+| 파일 | `brain/api/vortex_api.py:290` |
+| 영향도 | **MEDIUM** |
+| 발견일 | 2026-03-21 |
+| 상태 | 🟡 pre-market 기능 활성화 시 수정 예정 |
+
+- `prob > 0.45` vs Vesper 본체 `0.7` 불일치
+- `abs(gap_ratio) > 7.0`, `vol_surge > 5.0` 매직 넘버 — 학습 분포 근거 없음
+
+### BUG-V15: `vortex_model_v1_with_pre` 메타데이터 없음
+
+| 항목 | 내용 |
+|------|------|
+| 파일 | `data/models/` |
+| 영향도 | **MEDIUM** |
+| 발견일 | 2026-03-21 |
+| 상태 | 🟡 pre-market 기능 활성화 시 재학습으로 자동 생성 |
 
 ---
 
 ## ⚠️ SUSPECT (Open)
 
-(현재 Open SUSPECT 없음)
+### S-V1: pre-market 피처 대체값 — 분포 이탈 가능
+
+| 항목 | 내용 |
+|------|------|
+| 파일 | `brain/api/vortex_api.py:274-275` |
+| 영향도 | **LOW** |
+| 발견일 | 2026-03-21 |
+| 상태 | ⚠️ pre-market 미사용 중 — 활성화 시 검토 |
+
+### S-V3: DB 비밀번호 소스코드 하드코딩
+
+| 항목 | 내용 |
+|------|------|
+| 파일 | `brain/core/config.py:50` |
+| 영향도 | **LOW** |
+| 발견일 | 2026-03-21 |
+| 상태 | ⚠️ Pydantic Settings 환경변수 우선 적용 — 프로덕션 배포 시 `.env` 분리 |
 
 ---
 
@@ -63,8 +98,11 @@
 | BUG-V9 | `vortex_train.py` Validation Set + early_stopping 누락 | 2026-03-21 | balanced만 적용되고 원본 누락 — 과적합 방지 브레이크 없음 |
 | BUG-V10 | `vortex_train.py` → `vortex_train_premarket.py` 리네임 | 2026-03-21 | 프리마켓 피처 포함 학습 스크립트 — 파일명으로 용도 구분 |
 | BUG-V11 | `vortex_train_balanced.py` 훈련 기간 `2018→2017` 통일 | 2026-03-21 | 2017 데이터 존재하므로 두 스크립트 훈련 기간 일치시킴 |
+| BUG-V12 | API 피처 리스트 하드코딩 → `_meta.json` 기반 로드 | 2026-03-21 | Train-Inference Consistency 보장 |
+| BUG-V13 | 피처 순서 명시적 보장 → `DataFrame[FEATURE_COLS]` 적용 | 2026-03-21 | BUG-V12와 동시 해결 |
+| S-V2 | API 입력 NaN/inf 검증 없음 → Pydantic field_validator 추가 | 2026-03-21 | 테스트 케이스 포함 |
 
 ---
 
 *"모델의 실력은 데이터의 품질에서 시작된다. 오염된 입력은 어떤 알고리즘도 구원하지 못한다." — Jack*
-*마지막 업데이트: 2026-03-21 by codegg (잭 리뷰 8건 + 추가 2건 반영, 트래커 신규 생성)*
+*마지막 업데이트: 2026-03-21 by codegg (잭 2차 리뷰 BUG-V12~V15, S-V1~V3 반영)*

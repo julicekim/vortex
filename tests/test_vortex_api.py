@@ -45,6 +45,22 @@ def test_predict_endpoint_invalid_input():
     response = client.post("/predict", json=payload)
     assert response.status_code == 422 # Unprocessable Entity
 
+def test_predict_endpoint_nan_inf_rejected():
+    """
+    [S-V2] NaN/inf 입력 차단 테스트 — Pydantic validator 레벨 검증
+    (JSON 표준이 NaN/inf를 거부하므로, Pydantic 모델 직접 검증)
+    """
+    from brain.api.vortex_api import FeatureInput
+    from pydantic import ValidationError
+
+    # NaN 입력
+    with pytest.raises(ValidationError):
+        FeatureInput(vol_surge_ratio=float('nan'), vwap_dist_pct=0.5, mins_from_open=30.0, atr_compression_ratio=0.8)
+
+    # inf 입력
+    with pytest.raises(ValidationError):
+        FeatureInput(vol_surge_ratio=1.5, vwap_dist_pct=float('inf'), mins_from_open=30.0, atr_compression_ratio=0.8)
+
 @patch("brain.api.vortex_api.db_client")
 @patch("brain.api.vortex_api.os.path.exists")
 def test_pre_market_validation_flow(mock_exists, mock_db):

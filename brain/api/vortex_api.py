@@ -1,9 +1,11 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 import xgboost as xgb
 import pandas as pd
 import numpy as np
 import os
+import json
+import math
 from datetime import datetime, timezone, timedelta
 from brain.core.config import settings
 from brain.core.db import PostgresClient
@@ -24,9 +26,17 @@ if not os.path.exists(model_path):
 logger.info(f"🧠 소피아(Vortex 1.0 Balanced) 뇌를 메모리에 로드 중... ({model_path})")
 vortex_model = xgb.XGBClassifier()
 vortex_model.load_model(model_path)
-logger.success("✅ Vortex 모델 로드 완료. API 서버가 준이(Junie)의 요청을 기다립니다!!")
 
-# v2 모델 (프리마켓 피처 포함: 6개)
+# [BUG-V12 FIX] _meta.json에서 피처 리스트 로드 — Train-Inference Consistency 보장
+meta_path = model_path.replace(".json", "_meta.json")
+if not os.path.exists(meta_path):
+    raise FileNotFoundError(f"Model metadata not found: {meta_path}")
+with open(meta_path) as f:
+    model_meta = json.load(f)
+FEATURE_COLS_V1 = model_meta["features"]
+logger.success(f"✅ Vortex 모델 로드 완료. 피처: {FEATURE_COLS_V1}")
+
+# v2 모델 (프리마켓 피처 포함: 6개) — 현재 미사용, meta 없으면 하드코딩 fallback
 model_v2_path = os.path.join(settings.MODEL_DIR, "vortex_model_v1_with_pre.json")
 if not os.path.exists(model_v2_path):
     logger.error(f"🚨 v2 모델 파일이 존재하지 않습니다: {model_v2_path}")
@@ -35,6 +45,16 @@ if not os.path.exists(model_v2_path):
 logger.info(f"🧠 소피아 v2(with_pre) 뇌를 메모리에 로드 중... ({model_v2_path})")
 vortex_model_v2 = xgb.XGBClassifier()
 vortex_model_v2.load_model(model_v2_path)
+meta_v2_path = model_v2_path.replace(".json", "_meta.json")
+if os.path.exists(meta_v2_path):
+    with open(meta_v2_path) as f:
+        FEATURE_COLS_V2 = json.load(f)["features"]
+else:
+    FEATURE_COLS_V2 = [
+        "feat_vol_surge_ratio", "feat_vwap_dist_pct", "feat_mins_from_open",
+        "feat_atr_compression_ratio", "feat_pre_market_gap", "feat_pre_market_high_dist"
+    ]
+    logger.warning(f"⚠️ v2 메타데이터 없음 — 하드코딩 피처 사용: {FEATURE_COLS_V2}")
 logger.success("✅ Vortex v2 모델 로드 완료.")
 
 # 2. 입력 데이터 구조 정의 (Type Validation & Documentation)
@@ -49,6 +69,14 @@ class FeatureInput(BaseModel):
     mins_from_open: float = Field(..., description="개장 후 경과 시간 (분)")
     atr_compression_ratio: float = Field(..., description="변동성 압축 비율 (1m/5m)")
 
+    # [S-V2 FIX] NaN/inf 입력 차단 — 학습은 필터링하는데 추론은 무방비였음
+    @field_validator('*', mode='before')
+    @classmethod
+    def check_finite(cls, v):
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            raise ValueError("Feature value must be finite (no NaN/inf)")
+        return v
+
 class FeatureInputV2(BaseModel):
     """프리마켓 피처 포함 v2 입력 스키마 (6개 피처)"""
     model_config = ConfigDict(populate_by_name=True)
@@ -59,6 +87,13 @@ class FeatureInputV2(BaseModel):
     atr_compression_ratio: float = Field(..., description="변동성 압축 비율 (1m/5m)")
     pre_market_gap: float = Field(..., description="프리마켓 갭 비율 (%)")
     pre_market_high_dist: float = Field(..., description="프리마켓 고점 이격도 (%)")
+
+    @field_validator('*', mode='before')
+    @classmethod
+    def check_finite(cls, v):
+        if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+            raise ValueError("Feature value must be finite (no NaN/inf)")
+        return v
 
 
 # 3. 추론 엔드포인트
@@ -79,10 +114,10 @@ def predict_whipsaw(data: FeatureInput):
             "feat_atr_compression_ratio": data.atr_compression_ratio
         }
         
-        # [Dex's Detailed Logging] 줄(JUL) 형님 요청: 추론 요청 데이터 상세 기록!!
         logger.info(f"📥 [Predict Request] Features: {input_dict}")
-        
-        df = pd.DataFrame([input_dict])
+
+        # [BUG-V13 FIX] _meta.json 피처 순서로 강제 정렬 — XGBoost 컬럼 순서 민감
+        df = pd.DataFrame([input_dict])[FEATURE_COLS_V1]
         
         # 추론 실행 (XGBoost Predict)
         # XGBClassifier는 DataFrame의 컬럼명을 확인하므로, feat_ 접두사가 반드시 있어야 함!!
@@ -122,7 +157,7 @@ def predict_v2(data: FeatureInputV2):
             "feat_pre_market_high_dist": data.pre_market_high_dist,
         }
         logger.info(f"📥 [Predict v2 Request] Features: {input_dict}")
-        df = pd.DataFrame([input_dict])
+        df = pd.DataFrame([input_dict])[FEATURE_COLS_V2]
         prediction = vortex_model_v2.predict(df)[0]
         prob = float(vortex_model_v2.predict_proba(df)[0][1])
         result = {
@@ -275,13 +310,13 @@ async def validate_pre_market(target_date: str = None):
                 "atr_compression_ratio": 1.0 # 프리마켓은 변동성 압축 데이터 부재로 1.0 고정
             }
             
-            # 추론 실행
+            # 추론 실행 — FEATURE_COLS_V1 순서 보장
             inference_df = pd.DataFrame([{
                 "feat_vol_surge_ratio": input_features["vol_surge_ratio"],
                 "feat_vwap_dist_pct": input_features["vwap_dist_pct"],
                 "feat_mins_from_open": input_features["mins_from_open"],
                 "feat_atr_compression_ratio": input_features["atr_compression_ratio"]
-            }])
+            }])[FEATURE_COLS_V1]
             
             prob = float(vortex_model.predict_proba(inference_df)[0][1])
             
