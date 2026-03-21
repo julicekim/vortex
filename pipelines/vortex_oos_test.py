@@ -14,7 +14,8 @@ def run_oos_test(suffix: str = ""):
     logger.info(f">>> [Phase 3] Vortex 1.0 OOS 검증 프로세스 가동!! (2024-2025, Suffix: {suffix})")
     
     # 1. 봉인된 2024~2025 데이터 로드
-    oos_dir = os.path.join(settings.ML_FEATURES_DIR, f"sophia_train_v1{suffix}/oos_test_2024_2025")
+    # OOS 데이터는 항상 sophia_train_v1/ 에 위치 (suffix는 모델 선택에만 사용)
+    oos_dir = os.path.join(settings.ML_FEATURES_DIR, "sophia_train_v1/oos_test_2024_2025")
     
     if not os.path.exists(oos_dir):
         logger.error(f"OOS 데이터 폴더가 없습니다: {oos_dir}")
@@ -46,28 +47,10 @@ def run_oos_test(suffix: str = ""):
 
     logger.info(f"총 {len(df_oos)}행의 미지(Unknown) 데이터셋 로드 완료!!")
 
-    # 2. 피처(X)와 정답지(Y) 분리
-    feature_cols = [
-        "feat_vol_surge_ratio", 
-        "feat_vwap_dist_pct", 
-        "feat_mins_from_open", 
-        "feat_atr_compression_ratio",
-        "feat_pre_market_gap",
-        "feat_pre_market_high_dist"
-    ]
-    target_col = "target_label"
-
-    # 존재하는 피처만 선택
-    available_features = [c for c in feature_cols if c in df_oos.columns]
-    logger.info(f"사용 가능한 피처: {available_features}")
-
-    X_oos = df_oos.select(available_features).to_pandas()
-    y_oos = df_oos.select(target_col).to_pandas().values.ravel()
-    
-    # 3. 소피아의 뇌(모델) 로드
+    # 2. 소피아의 뇌(모델) 로드
     model_name = f"vortex_model_v1{suffix}.json"
     model_path = os.path.join(settings.MODEL_DIR, model_name)
-    
+
     if not os.path.exists(model_path):
         logger.error(f"모델 파일이 존재하지 않습니다: {model_path}")
         return
@@ -75,7 +58,32 @@ def run_oos_test(suffix: str = ""):
     logger.info(f"🧠 Vortex 모델 로드 중... ({model_name})")
     model = xgb.XGBClassifier()
     model.load_model(model_path)
-    
+
+    # 3. 피처(X)와 정답지(Y) 분리 — 모델 메타데이터 기반 피처 선택
+    meta_path = os.path.join(settings.MODEL_DIR, f"vortex_model_v1{suffix}_meta.json")
+    if os.path.exists(meta_path):
+        import json
+        with open(meta_path) as f:
+            meta = json.load(f)
+        feature_cols = meta["features"]
+        logger.info(f"메타데이터 기반 피처 사용: {feature_cols}")
+    else:
+        feature_cols = [
+            "feat_vol_surge_ratio",
+            "feat_vwap_dist_pct",
+            "feat_mins_from_open",
+            "feat_atr_compression_ratio",
+            "feat_pre_market_gap",
+            "feat_pre_market_high_dist"
+        ]
+        # 존재하는 피처만 선택
+        feature_cols = [c for c in feature_cols if c in df_oos.columns]
+        logger.info(f"사용 가능한 피처: {feature_cols}")
+
+    target_col = "target_label"
+    X_oos = df_oos.select(feature_cols).to_pandas()
+    y_oos = df_oos.select(target_col).to_pandas().values.ravel()
+
     # 4. 미래 데이터 예측 및 채점
     logger.info("🔥 OOS 데이터에 대한 예측 및 성능 평가 시작!!")
     y_pred = model.predict(X_oos)

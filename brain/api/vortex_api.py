@@ -60,9 +60,6 @@ class FeatureInputV2(BaseModel):
     pre_market_gap: float = Field(..., description="프리마켓 갭 비율 (%)")
     pre_market_high_dist: float = Field(..., description="프리마켓 고점 이격도 (%)")
 
-class BatchDateRequest(BaseModel):
-    start_date: str = Field(..., description="시작 날짜 (YYYY-MM-DD)")
-    end_date: str = Field(..., description="종료 날짜 (YYYY-MM-DD)")
 
 # 3. 추론 엔드포인트
 @app.post("/predict")
@@ -322,64 +319,6 @@ async def validate_pre_market(target_date: str = None):
         logger.error(f"🚨 프리마켓 검증 중 치명적 에러 발생: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/pre-market/batch")
-async def validate_pre_market_batch(data: BatchDateRequest):
-    """
-    [Sophia Batch Validation] 특정 기간(1년 등)의 프리마켓 데이터를 일괄 분석하여 DB에 적재한다.
-    - 백테스트(Backtest)용 대량 데이터 생성에 최적화!!
-    """
-    start_time = datetime.now()
-    logger.debug(f"Received batch request: {data}")
-    try:
-        try:
-            start_dt = datetime.strptime(data.start_date, '%Y-%m-%d')
-            end_dt = datetime.strptime(data.end_date, '%Y-%m-%d')
-            logger.debug(f"Parsed dates: {start_dt}, {end_dt}")
-        except ValueError as ve:
-            logger.warning(f"Date parsing failed: {ve}")
-            raise HTTPException(status_code=400, detail=f"Invalid date format. Use YYYY-MM-DD. Error: {str(ve)}")
-            
-        if start_dt > end_dt:
-            raise HTTPException(status_code=400, detail="start_date cannot be after end_date")
-            
-        logger.info(f"📅 [Batch Validation] {data.start_date} ~ {data.end_date} 분석 시작!!")
-        
-        current_dt = start_dt
-        total_analyzed = 0
-        days_processed = 0
-        
-        while current_dt <= end_dt:
-            # 주말(토요일=5, 일요일=6)은 분석에서 제외 (영업일 기준)!!
-            if current_dt.weekday() < 5:
-                target_date = current_dt.strftime('%Y-%m-%d')
-                # 기존 validate_pre_market 로직 재활용 (비동기 함수 호출)
-                # 🚨 주의: sync_status.txt 체크는 배치 시에는 워닝 정도로만 처리됨
-                try:
-                    result = await validate_pre_market(target_date)
-                    if result["status"] == "success":
-                        total_analyzed += result["analyzed_count"]
-                        days_processed += 1
-                except Exception as e:
-                    logger.warning(f"⚠️ {target_date} 분석 실패 (건너뜀): {e}")
-            
-            current_dt += timedelta(days=1)
-            
-        latency = int((datetime.now() - start_time).total_seconds() * 1000)
-        logger.success(f"✅ 배치 분석 완료!! {days_processed}일간 총 {total_analyzed}개 레코드 적재됨. (소요: {latency}ms)")
-        
-        return {
-            "status": "success",
-            "days_processed": days_processed,
-            "total_analyzed": total_analyzed,
-            "latency_ms": latency
-        }
-        
-    except HTTPException:
-        # FastAPI의 HTTPException은 그대로 통과시켜야 400 등 올바른 상태코드가 반환됨
-        raise
-    except Exception as e:
-        logger.error(f"🚨 배치 검증 중 치명적 에러 발생: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 # 서버 실행 방법:
 # PYTHONPATH=$PYTHONPATH:. uvicorn brain.api.vortex_api:app --host 127.0.0.1 --port 8000
